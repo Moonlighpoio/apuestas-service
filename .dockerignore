@@ -1,0 +1,22 @@
+# Git
+.git
+.gitignore
+
+# Entornos virtuales
+venv/
+env/
+.venv/
+
+# Variables de entorno locales
+.env
+
+# Archivos de caché de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Archivos Docker
+Dockerfile
+.dockerignore
