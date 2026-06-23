@@ -7,10 +7,11 @@ Comparte la base de datos y el JWT con casino-backend. Permite:
   - Listar eventos deportivos abiertos con sus cuotas.
   - Apostar: debita saldo y registra la apuesta (transacción atómica).
   - Ver las apuestas propias.
-  - Resolver un evento (admin): liquida apuestas, paga las ganadoras.
+ from fastapi import Depends, FastAPI, HTTPException, Response, status
 
 Prefijo de rutas: /api/apuestas
 """
+from fastapi import Depends, FastAPI, HTTPException, Response, status
 import json
 import os
 from contextlib import asynccontextmanager
@@ -61,11 +62,24 @@ class ResolverRequest(BaseModel):
     resultado: str = Field(description="local | empate | visita")
 
 
-# TODO (alumno): implementar las rutas de salud que usará Kubernetes:
-#   - liveness: ¿el proceso está vivo? (respuesta simple).
-#   - readiness: ¿está listo para recibir tráfico? Debe verificar la BD.
-# Luego configurar livenessProbe/readinessProbe en el Deployment de EKS.
+@app.get("/livez", status_code=status.HTTP_200_OK)
+def liveness():
+    """Sonda Liveness: Responde 200 si el proceso de la API está vivo."""
+    return {"status": "ok"}
 
+@app.get("/readyz")
+def readiness(response: Response):
+    """Sonda Readiness: Verifica que la BD esté levantada y aceptando conexiones."""
+    try:
+        # Reutilizamos el context manager nativo de tu proyecto
+        with conexion() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1;")
+        return {"status": "ready"}
+    except Exception as e:
+        # Si la BD falla, Kubernetes saca el pod del balanceo (HTTP 503)
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return {"status": "unavailable", "detail": "Falla de conexión a la base de datos"}
 
 @app.get("/api/apuestas/eventos")
 def listar_eventos():
